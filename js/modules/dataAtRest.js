@@ -5,8 +5,8 @@ const SCENARIOS = [
     onLabel: "Disk encryption: On",
     offLabel: "Disk encryption: Off",
     onCopy: "The drive is unreadable without your credentials. Recovering the data without them is computationally infeasible.",
-    offCopy: "Whoever has the laptop has every file on it, instantly, no login needed — just pull the drive or boot from a USB stick.",
-    tech: "Full-disk encryption (BitLocker, FileVault, LUKS) encrypts the drive with a key protected by your login credentials/TPM. Without it, an attacker can remove the drive, mount it on another machine, and read the filesystem directly — the OS login screen was never actually protecting the data, only the running session.",
+    offCopy: "Whoever has the laptop has every file on it, instantly, no login needed: just pull the drive or boot from a USB stick.",
+    tech: "Full-disk encryption (BitLocker, FileVault, LUKS) encrypts the drive with a key protected by your login credentials/TPM. Without it, an attacker can remove the drive, mount it on another machine, and read the filesystem directly. The OS login screen was never actually protecting the data, only the running session.",
   },
   {
     id: "bucket",
@@ -14,8 +14,8 @@ const SCENARIOS = [
     onLabel: "Access: Private + authenticated",
     offLabel: "Access: Public",
     onCopy: "Anonymous requests are rejected. Only authenticated, authorized identities can list or download anything.",
-    offCopy: "Anyone with the URL — or a bucket-scanning bot — can list and download every file. No login required.",
-    tech: "Public buckets are one of the most common real-world breach causes: automated scanners continuously enumerate common bucket-name patterns across providers. A publicly listable bucket can be read with a single unauthenticated request, e.g. <code>curl https://example-bucket.s3.amazonaws.com/</code> — no credentials, no exploit, just a misconfigured permission.",
+    offCopy: "Anyone with the URL, or a bucket-scanning bot, can list and download every file. No login required.",
+    tech: "Public buckets are one of the most common real-world breach causes: automated scanners continuously enumerate common bucket-name patterns across providers. A publicly listable bucket can be read with a single unauthenticated request, e.g. <code>curl https://example-bucket.s3.amazonaws.com/</code>, with no credentials and no exploit, just a misconfigured permission.",
   },
   {
     id: "browser",
@@ -24,7 +24,7 @@ const SCENARIOS = [
     offLabel: "Autofill: Browser-saved",
     onCopy: "Reading the vault still requires the separate master password or biometric, even on an unlocked device.",
     offCopy: "Anyone with the unlocked device can open the browser's saved-passwords page and read every password in plain text.",
-    tech: "Most browsers gate their saved-password view behind the OS login, not a separate secret — so once a device is unlocked (shoulder surf, unattended session, stolen unlocked phone), every saved credential is one settings page away. A dedicated password manager adds a second, independent secret that an unlocked device alone doesn't satisfy.",
+    tech: "Most browsers gate their saved-password view behind the OS login, not a separate secret, so once a device is unlocked (shoulder surf, unattended session, stolen unlocked phone), every saved credential is one settings page away. A dedicated password manager adds a second, independent secret that an unlocked device alone doesn't satisfy.",
   },
 ];
 

@@ -30,60 +30,28 @@
     <section class="tabpanel" id="module-1" role="tabpanel" aria-labelledby="tab-module-1" tabindex="0">
       <p class="module-kicker">Module 1</p>
       <h2>Email vs. SFTP: who has a copy, and can you take it back?</h2>
-      <p class="module-lede">"I emailed it to them" and "I put it on the SFTP" feel like the same action. They aren't. One creates a growing, uncontrollable number of copies the moment you hit send; the other keeps the file in one place you can cut off instantly.</p>
+      <p class="module-lede">"I emailed it to them" and "I put it on the SFTP" feel like the same action. They aren't always different in the way people assume, though: whether SFTP actually avoids the problem email has depends on who controls the server. There's more to the comparison too: how easily either one reaches the wrong person by accident, and what each protocol actually guarantees about encryption in transit. But once any copy exists, by any method, what happens to it next is the same problem either way.</p>
       <div class="disclosure-controls">
         <button type="button" class="expand-all">Expand all technical detail</button>
         <button type="button" class="collapse-all">Collapse all</button>
       </div>
 
       <div class="module-section">
-        <h3>Plain language</h3>
-        <p>When you email a file, a copy lands in your Sent folder, a copy lands in the recipient's inbox, and copies pass through mail servers and backup systems on both ends &mdash; all before anyone forwards or downloads anything. Every one of those copies is now out of your hands. When you share a file over SFTP (or any managed transfer with access control), there is exactly one copy, sitting in one place, and you can revoke access to it at any moment.</p>
+        <h3>Plain language: certainty and timing (it depends who owns the server)</h3>
+        <p>Email is a store-and-forward system: the moment you hit send, the message is delivered to the recipient's mail server and inbox (infrastructure you don't administer) unconditionally. There is no step in between where you could stop that from happening. SFTP can genuinely avoid that problem, but only if you're the one administering the server: if it's yours (or your organization's), nothing is copied anywhere else until someone with valid credentials actually connects and downloads it, and you can revoke access at any point before that happens. If instead you're uploading to a server a third party hosts (a client's, a vendor's, a managed file-transfer platform), the moment you upload, a copy already exists on infrastructure you don't control, same as email's recipient mailbox, and you may not even be able to revoke it yourself. The advantage belongs to whoever administers the server, not to SFTP as a protocol.</p>
         <details class="tech">
           <summary>Technical detail</summary>
-          <p>Email traverses SMTP relays, is retained in journaling/archiving systems for compliance, and is backed up on both the sender's and recipient's mail infrastructure &mdash; typically for 30&ndash;90+ days, often indefinitely for legal-hold or backup-retention reasons. Transport is usually TLS-encrypted hop-to-hop (opportunistic <code>STARTTLS</code>), not end-to-end, so each relay can read the plaintext in transit. Attachment scanning/DLP gateways may also make and retain their own copies. SFTP (or an access-controlled managed-transfer service) keeps one file at a rest location behind authentication, encrypts the transfer channel end-to-end for that hop, and access is a database row you can delete &mdash; there's no equivalent of a "Sent folder" copy that outlives the transfer.</p>
+          <p>SMTP relays a message hop-by-hop (sender's server &rarr; possibly intermediate relays &rarr; recipient's server), and each hop typically negotiates encryption opportunistically via <code>STARTTLS</code>: if the next hop doesn't support it, or under an active downgrade, the connection can fall back to plaintext (mitigations like MTA-STS help but aren't universal). Each relay also decrypts and re-encrypts, so every hop's administrator can, in principle, read the plaintext in transit. SFTP runs over SSH, which has no plaintext fallback: the whole transfer is one mutually authenticated, encrypted tunnel directly between client and server, with no intermediate relay ever seeing the content. That transport-level guarantee holds regardless of who administers the server; it's the "nothing is copied until someone downloads it" advantage above that depends on server ownership, not this one. It also assumes reasonably configured SSH (strong keys or MFA, not password-only auth); a badly configured SFTP server can still be worse in practice than a well-configured, modern mail setup.</p>
         </details>
       </div>
 
-      <div class="module-section" id="module-1-widget">
-        <h3>Try it: scrub through 90 days</h3>
-        <div class="timeline-row">
-          <label for="m1-day-slider"><strong>Day:</strong> <span class="slider-output" id="m1-day-output">0</span></label>
-          <input type="range" id="m1-day-slider" min="0" max="90" value="0" step="1">
-        </div>
-
-        <div class="comparison-strip">
-          <div class="comparison-counter counter-email">
-            <span class="count" id="m1-email-count">0</span>
-            <span class="count-label">Email copies outside your control</span>
-          </div>
-          <div class="comparison-counter counter-sftp">
-            <span class="count" id="m1-sftp-count">0</span>
-            <span class="count-label">SFTP copies outside your control</span>
-          </div>
-        </div>
-
-        <div class="diagram-panels">
-          <div class="diagram-panel">
-            <h4>Email</h4>
-            <ul class="node-list" id="m1-email-nodes"></ul>
-            <div class="action-buttons">
-              <button type="button" class="btn" id="m1-forward" disabled>Recipient forwards it (+2)</button>
-              <button type="button" class="btn" id="m1-cc" disabled>Recipient CCs a colleague (+1)</button>
-              <button type="button" class="btn" id="m1-download" disabled>Recipient downloads to personal device (+1)</button>
-              <button type="button" class="btn btn-primary" id="m1-recall" disabled>Attempt recall</button>
-            </div>
-            <p class="recall-result" id="m1-recall-result"></p>
-          </div>
-          <div class="diagram-panel">
-            <h4>SFTP / managed transfer</h4>
-            <ul class="node-list" id="m1-sftp-nodes"></ul>
-            <div class="action-buttons">
-              <button type="button" class="btn btn-primary" id="m1-revoke" disabled>Revoke access</button>
-            </div>
-            <p class="recall-result" id="m1-revoke-result"></p>
-          </div>
-        </div>
+      <div class="module-section">
+        <h3>Plain language: the human factor</h3>
+        <p>There's a separate risk that has nothing to do with either protocol: sending it to the wrong person. Composing and addressing an email is one fast, autocomplete-assisted action (a similarly-named contact, a stale address-book entry, a reply-all), and misdirected email is consistently one of the most common real-world causes of accidental data exposure. Sharing over SFTP usually requires a separate, more deliberate step: creating an account or credential for a specific person, or generating a link for them. That doesn't make sending it to the wrong person impossible (access can still be misconfigured, or a credential shared with the wrong contact), but it removes the specific "autocomplete grabbed the wrong Sarah" failure mode that a To: field invites.</p>
+        <details class="tech">
+          <summary>Technical detail</summary>
+          <p>This is a workflow/UX risk, not a cryptographic one, and it's orthogonal to both axes above: it applies regardless of how strong the encryption is on either side, and no amount of transport security fixes an address typed to the wrong person.</p>
+        </details>
       </div>
     </section>
 
@@ -98,7 +66,7 @@
 
       <div class="module-section">
         <h3>Plain language</h3>
-        <p>A password-protected file isn't cracked by guessing it politely, one attempt at a time through the file's own dialog box &mdash; it's cracked by extracting the encrypted data and testing millions or billions of candidate passwords per second offline, with no lockouts and no rate limits. How long that takes depends on how many possible passwords there are (length and character variety) and how fast the attacker's hardware can test them against this specific file format.</p>
+        <p>A password-protected file isn't cracked by guessing it politely, one attempt at a time through the file's own dialog box; it's cracked by extracting the encrypted data and testing millions or billions of candidate passwords per second offline, with no lockouts and no rate limits. How long that takes depends on how many possible passwords there are (length and character variety) and how fast the attacker's hardware can test them against this specific file format.</p>
         <details class="tech">
           <summary>Technical detail</summary>
           <p>Password entropy in bits is <code>H = L &times; log2(N)</code>, where <code>L</code> is password length and <code>N</code> is the size of the character set used. The full search space is <code>N^L</code> candidates. An offline attacker's effective speed depends heavily on the file format's key-derivation scheme: legacy ZIP ("ZipCrypto") uses a fast, cryptographically weak stream cipher that GPUs tear through; modern AES-256 zips and Office 2013+ documents run the password through a deliberately slow key-derivation function (PBKDF2, often 100,000+ iterations for Office), which is specifically designed to blunt hardware acceleration.</p>
@@ -162,7 +130,7 @@
             <span class="metric-label">Possible passwords</span>
           </div>
           <div class="metric">
-            <span class="metric-value" id="m2-cracktime">&mdash;</span>
+            <span class="metric-value" id="m2-cracktime">-</span>
             <span class="metric-label">Estimated average crack time</span>
           </div>
         </div>
@@ -171,7 +139,7 @@
 
         <details class="tech">
           <summary>Technical detail</summary>
-          <p>Guess rates used here (guesses/second) are anchored to published hashcat benchmarks on an RTX 4090 for the GPU tier (mode 17200 for legacy ZIP/ZipCrypto, mode 13600 for WinZip AES, mode 9600 for Office 2013+); the laptop and cluster tiers are illustrative scaling factors on top of that anchor (laptop &asymp; GPU &divide; 1000&ndash;1500 depending on scheme; cluster &asymp; GPU &times; 64), not independently benchmarked. Treat the numbers as teaching aids for relative comparison, not audited security measurements. Average crack time assumes an even random search and takes half the full search space; worst case is double what's shown. Notice how much closer the laptop and cluster numbers are for Office documents than for legacy ZIP &mdash; that gap is PBKDF2 doing its job.</p>
+          <p>Guess rates used here (guesses/second) are anchored to published hashcat benchmarks on an RTX 4090 for the GPU tier (mode 17200 for legacy ZIP/ZipCrypto, mode 13600 for WinZip AES, mode 9600 for Office 2013+); the laptop and cluster tiers are illustrative scaling factors on top of that anchor (laptop &asymp; GPU &divide; 1000&ndash;1500 depending on scheme; cluster &asymp; GPU &times; 64), not independently benchmarked. Treat the numbers as teaching aids for relative comparison, not audited security measurements. Average crack time assumes an even random search and takes half the full search space; worst case is double what's shown. Notice how much closer the laptop and cluster numbers are for Office documents than for legacy ZIP. That gap is PBKDF2 doing its job.</p>
         </details>
 
         <div class="chart-wrap" id="m2-chart"></div>
@@ -188,10 +156,10 @@
       </div>
 
       <div class="module-section">
-        <p>When a breached site's password database leaks, attackers don't just try that password on that site &mdash; they run it (and every other leaked password) against every other major site the same email address might be registered on. This is called credential stuffing, and it's almost entirely automated.</p>
+        <p>When a breached site's password database leaks, attackers don't just try that password on that site; they run it (and every other leaked password) against every other major site the same email address might be registered on. This is called credential stuffing, and it's almost entirely automated.</p>
         <details class="tech">
           <summary>Technical detail</summary>
-          <p>Credential-stuffing tools take breach dumps of (email, password) pairs and replay them at scale against banking, email, retail, and social login endpoints, relying on the well-documented fact that a large share of users reuse passwords across sites. Multi-factor authentication (MFA) blocks stuffing even when the password is correct, because the attacker still lacks the second factor &mdash; which is why MFA coverage matters as much as password uniqueness.</p>
+          <p>Credential-stuffing tools take breach dumps of (email, password) pairs and replay them at scale against banking, email, retail, and social login endpoints, relying on the well-documented fact that a large share of users reuse passwords across sites. Multi-factor authentication (MFA) blocks stuffing even when the password is correct, because the attacker still lacks the second factor, which is why MFA coverage matters as much as password uniqueness.</p>
         </details>
       </div>
 
@@ -220,7 +188,7 @@
         <div class="card-grid" style="margin-top:20px;">
           <div class="scenario-card">
             <h4>Plaintext notes app</h4>
-            <p>One device compromise exposes every password instantly &mdash; they're sitting there in plain text.</p>
+            <p>One device compromise exposes every password instantly: they're sitting there in plain text.</p>
           </div>
           <div class="scenario-card">
             <h4>Password manager</h4>
@@ -250,7 +218,7 @@
     <section class="tabpanel" id="module-5" role="tabpanel" aria-labelledby="tab-module-5" tabindex="0">
       <p class="module-kicker">Module 5</p>
       <h2>Data at rest: protected until it isn't</h2>
-      <p class="module-lede">A password or lock screen only protects data while the device is on and locked. What happens the moment that assumption breaks &mdash; a lost laptop, a misconfigured bucket, an unlocked phone &mdash; depends entirely on what's underneath.</p>
+      <p class="module-lede">A password or lock screen only protects data while the device is on and locked. What happens the moment that assumption breaks (a lost laptop, a misconfigured bucket, an unlocked phone) depends entirely on what's underneath.</p>
       <div class="disclosure-controls">
         <button type="button" class="expand-all">Expand all technical detail</button>
         <button type="button" class="collapse-all">Collapse all</button>
