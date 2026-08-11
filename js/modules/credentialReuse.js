@@ -23,7 +23,11 @@ export function init(root) {
   }
 
   function resetAccounts() {
-    ACCOUNTS.forEach((a) => { nodeEls[a.id].className = "account-node"; });
+    ACCOUNTS.forEach((a) => {
+      const el = nodeEls[a.id];
+      el.className = "account-node";
+      el.title = "";
+    });
     updateCounter();
     breachBtn.disabled = false;
   }
@@ -31,16 +35,25 @@ export function init(root) {
   function breach() {
     const reuse = reuseToggle.checked;
     const mfa = mfaToggle.checked;
-    const targets = reuse ? ACCOUNTS.map((a) => a.id) : ["shopping"];
 
-    targets.forEach((id, i) => {
-      setTimeout(() => {
-        const el = nodeEls[id];
-        el.classList.add(mfa ? "state-shielded" : "state-breached");
-        el.title = mfa ? "Password known, but login blocked by MFA" : "Password known and login succeeded";
-        updateCounter();
-      }, i * 180);
-    });
+    // The shopping account is exposed directly by its own database breach, not by
+    // an attacker logging in, so MFA (which only guards the login step) can't
+    // shield it. It's always compromised, regardless of either toggle.
+    nodeEls.shopping.classList.add("state-breached");
+    nodeEls.shopping.title = "Directly exposed by the site's own database breach";
+    updateCounter();
+
+    if (reuse) {
+      const stuffingTargets = ACCOUNTS.map((a) => a.id).filter((id) => id !== "shopping");
+      stuffingTargets.forEach((id, i) => {
+        setTimeout(() => {
+          const el = nodeEls[id];
+          el.classList.add(mfa ? "state-shielded" : "state-breached");
+          el.title = mfa ? "Password known, but login blocked by MFA" : "Password known and login succeeded";
+          updateCounter();
+        }, (i + 1) * 180);
+      });
+    }
 
     breachBtn.disabled = true;
   }
