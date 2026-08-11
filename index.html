@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Security Anti-Patterns / Bryan Smith</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Five interactive walk-throughs of everyday security mistakes, built for technical and non-technical readers alike.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23fffdf9'/%3E%3Ctext x='50' y='66' font-family='Helvetica Neue,Arial,sans-serif' font-size='40' font-weight='700' fill='%237a4f22' text-anchor='middle'%3EBS%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <h1>Security Anti-Patterns</h1>
+      <a class="back-link" href="/" target="_self">&larr; Back to all demos</a>
+    </div>
+  </header>
+
+  <main>
+    <p class="intro">Five everyday habits that feel safe but aren't, and the mechanics behind why. Each module starts in plain language; look for <strong>Technical detail</strong> panels wherever you want the actual math or protocol-level explanation.</p>
+
+    <div class="tablist" role="tablist" aria-label="Security anti-pattern modules">
+      <button class="tab" role="tab" id="tab-module-1" data-tab="module-1" aria-controls="module-1" aria-selected="false" tabindex="-1">1. File transfer</button>
+      <button class="tab" role="tab" id="tab-module-2" data-tab="module-2" aria-controls="module-2" aria-selected="false" tabindex="-1">2. Password-protected files</button>
+      <button class="tab" role="tab" id="tab-module-3" data-tab="module-3" aria-controls="module-3" aria-selected="false" tabindex="-1">3. Credential reuse</button>
+      <button class="tab" role="tab" id="tab-module-4" data-tab="module-4" aria-controls="module-4" aria-selected="false" tabindex="-1">4. Phishing</button>
+      <button class="tab" role="tab" id="tab-module-5" data-tab="module-5" aria-controls="module-5" aria-selected="false" tabindex="-1">5. Data at rest</button>
+    </div>
+
+    <section class="tabpanel" id="module-1" role="tabpanel" aria-labelledby="tab-module-1" tabindex="0">
+      <p class="module-kicker">Module 1</p>
+      <h2>Email vs. SFTP: who has a copy, and can you take it back?</h2>
+      <p class="module-lede">"I emailed it to them" and "I put it on the SFTP" feel like the same action. They aren't. One creates a growing, uncontrollable number of copies the moment you hit send; the other keeps the file in one place you can cut off instantly.</p>
+      <div class="disclosure-controls">
+        <button type="button" class="expand-all">Expand all technical detail</button>
+        <button type="button" class="collapse-all">Collapse all</button>
+      </div>
+
+      <div class="module-section">
+        <h3>Plain language</h3>
+        <p>When you email a file, a copy lands in your Sent folder, a copy lands in the recipient's inbox, and copies pass through mail servers and backup systems on both ends &mdash; all before anyone forwards or downloads anything. Every one of those copies is now out of your hands. When you share a file over SFTP (or any managed transfer with access control), there is exactly one copy, sitting in one place, and you can revoke access to it at any moment.</p>
+        <details class="tech">
+          <summary>Technical detail</summary>
+          <p>Email traverses SMTP relays, is retained in journaling/archiving systems for compliance, and is backed up on both the sender's and recipient's mail infrastructure &mdash; typically for 30&ndash;90+ days, often indefinitely for legal-hold or backup-retention reasons. Transport is usually TLS-encrypted hop-to-hop (opportunistic <code>STARTTLS</code>), not end-to-end, so each relay can read the plaintext in transit. Attachment scanning/DLP gateways may also make and retain their own copies. SFTP (or an access-controlled managed-transfer service) keeps one file at a rest location behind authentication, encrypts the transfer channel end-to-end for that hop, and access is a database row you can delete &mdash; there's no equivalent of a "Sent folder" copy that outlives the transfer.</p>
+        </details>
+      </div>
+
+      <div class="module-section" id="module-1-widget">
+        <h3>Try it: scrub through 90 days</h3>
+        <div class="timeline-row">
+          <label for="m1-day-slider"><strong>Day:</strong> <span class="slider-output" id="m1-day-output">0</span></label>
+          <input type="range" id="m1-day-slider" min="0" max="90" value="0" step="1">
+        </div>
+
+        <div class="comparison-strip">
+          <div class="comparison-counter counter-email">
+            <span class="count" id="m1-email-count">0</span>
+            <span class="count-label">Email copies outside your control</span>
+          </div>
+          <div class="comparison-counter counter-sftp">
+            <span class="count" id="m1-sftp-count">0</span>
+            <span class="count-label">SFTP copies outside your control</span>
+          </div>
+        </div>
+
+        <div class="diagram-panels">
+          <div class="diagram-panel">
+            <h4>Email</h4>
+            <ul class="node-list" id="m1-email-nodes"></ul>
+            <div class="action-buttons">
+              <button type="button" class="btn" id="m1-forward" disabled>Recipient forwards it (+2)</button>
+              <button type="button" class="btn" id="m1-cc" disabled>Recipient CCs a colleague (+1)</button>
+              <button type="button" class="btn" id="m1-download" disabled>Recipient downloads to personal device (+1)</button>
+              <button type="button" class="btn btn-primary" id="m1-recall" disabled>Attempt recall</button>
+            </div>
+            <p class="recall-result" id="m1-recall-result"></p>
+          </div>
+          <div class="diagram-panel">
+            <h4>SFTP / managed transfer</h4>
+            <ul class="node-list" id="m1-sftp-nodes"></ul>
+            <div class="action-buttons">
+              <button type="button" class="btn btn-primary" id="m1-revoke" disabled>Revoke access</button>
+            </div>
+            <p class="recall-result" id="m1-revoke-result"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="module-2" role="tabpanel" aria-labelledby="tab-module-2" tabindex="0">
+      <p class="module-kicker">Module 2</p>
+      <h2>"Password-protected" isn't the same as "safe"</h2>
+      <p class="module-lede">Putting a password on a zip or Office file feels like locking a door. Whether that lock actually holds depends on the password itself, which encryption scheme the file format uses, and how much hardware an attacker is willing to throw at it. Change any of those and "safe for years" can become "safe for seconds."</p>
+      <div class="disclosure-controls">
+        <button type="button" class="expand-all">Expand all technical detail</button>
+        <button type="button" class="collapse-all">Collapse all</button>
+      </div>
+
+      <div class="module-section">
+        <h3>Plain language</h3>
+        <p>A password-protected file isn't cracked by guessing it politely, one attempt at a time through the file's own dialog box &mdash; it's cracked by extracting the encrypted data and testing millions or billions of candidate passwords per second offline, with no lockouts and no rate limits. How long that takes depends on how many possible passwords there are (length and character variety) and how fast the attacker's hardware can test them against this specific file format.</p>
+        <details class="tech">
+          <summary>Technical detail</summary>
+          <p>Password entropy in bits is <code>H = L &times; log2(N)</code>, where <code>L</code> is password length and <code>N</code> is the size of the character set used. The full search space is <code>N^L</code> candidates. An offline attacker's effective speed depends heavily on the file format's key-derivation scheme: legacy ZIP ("ZipCrypto") uses a fast, cryptographically weak stream cipher that GPUs tear through; modern AES-256 zips and Office 2013+ documents run the password through a deliberately slow key-derivation function (PBKDF2, often 100,000+ iterations for Office), which is specifically designed to blunt hardware acceleration.</p>
+        </details>
+      </div>
+
+      <div class="module-section" id="module-2-widget">
+        <h3>Try it: crack-time calculator</h3>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="m2-length-slider">Password length: <span class="slider-output" id="m2-length-output">8</span> characters</label>
+            <input type="range" id="m2-length-slider" min="4" max="24" value="8" step="1">
+          </div>
+          <div class="field">
+            <label>Character set</label>
+            <div class="checkbox-group">
+              <label><input type="checkbox" id="m2-lowercase" checked> lowercase (a-z)</label>
+              <label><input type="checkbox" id="m2-uppercase"> UPPERCASE (A-Z)</label>
+              <label><input type="checkbox" id="m2-digits" checked> digits (0-9)</label>
+              <label><input type="checkbox" id="m2-symbols"> symbols (!@#...)</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="m2-scheme">File / encryption scheme</label>
+            <select id="m2-scheme">
+              <option value="zipcrypto" selected>Legacy ZIP password ("ZipCrypto")</option>
+              <option value="aes256zip">Modern AES-256 zip (7-Zip / WinZip AE-2)</option>
+              <option value="office">Password-protected Office document (2013+)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="m2-hardware">Attacker's hardware</label>
+            <select id="m2-hardware">
+              <option value="laptop">Laptop CPU</option>
+              <option value="gpu" selected>Consumer gaming GPU (RTX-4090-class)</option>
+              <option value="cluster">Rented cloud GPU cluster (~64 GPUs)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="toggle-row" for="m2-dictionary">
+              <span class="toggle-switch">
+                <input type="checkbox" id="m2-dictionary">
+                <span class="toggle-slider"></span>
+              </span>
+              Password is a common word / found in breach lists
+            </label>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div class="metric">
+            <span class="metric-value" id="m2-entropy">0 bits</span>
+            <span class="metric-label">Entropy</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" id="m2-searchspace">0</span>
+            <span class="metric-label">Possible passwords</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" id="m2-cracktime">&mdash;</span>
+            <span class="metric-label">Estimated average crack time</span>
+          </div>
+        </div>
+
+        <div class="callout callout-unsafe" id="m2-verdict"></div>
+
+        <details class="tech">
+          <summary>Technical detail</summary>
+          <p>Guess rates used here (guesses/second) are anchored to published hashcat benchmarks on an RTX 4090 for the GPU tier (mode 17200 for legacy ZIP/ZipCrypto, mode 13600 for WinZip AES, mode 9600 for Office 2013+); the laptop and cluster tiers are illustrative scaling factors on top of that anchor (laptop &asymp; GPU &divide; 1000&ndash;1500 depending on scheme; cluster &asymp; GPU &times; 64), not independently benchmarked. Treat the numbers as teaching aids for relative comparison, not audited security measurements. Average crack time assumes an even random search and takes half the full search space; worst case is double what's shown. Notice how much closer the laptop and cluster numbers are for Office documents than for legacy ZIP &mdash; that gap is PBKDF2 doing its job.</p>
+        </details>
+
+        <div class="chart-wrap" id="m2-chart"></div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="module-3" role="tabpanel" aria-labelledby="tab-module-3" tabindex="0">
+      <p class="module-kicker">Module 3</p>
+      <h2>One reused password, five compromised accounts</h2>
+      <p class="module-lede">Password reuse turns a single breach at a site you barely think about into access across everything else you use the same password for.</p>
+      <div class="disclosure-controls">
+        <button type="button" class="expand-all">Expand all technical detail</button>
+        <button type="button" class="collapse-all">Collapse all</button>
+      </div>
+
+      <div class="module-section">
+        <p>When a breached site's password database leaks, attackers don't just try that password on that site &mdash; they run it (and every other leaked password) against every other major site the same email address might be registered on. This is called credential stuffing, and it's almost entirely automated.</p>
+        <details class="tech">
+          <summary>Technical detail</summary>
+          <p>Credential-stuffing tools take breach dumps of (email, password) pairs and replay them at scale against banking, email, retail, and social login endpoints, relying on the well-documented fact that a large share of users reuse passwords across sites. Multi-factor authentication (MFA) blocks stuffing even when the password is correct, because the attacker still lacks the second factor &mdash; which is why MFA coverage matters as much as password uniqueness.</p>
+        </details>
+      </div>
+
+      <div class="module-section" id="module-3-widget">
+        <h3>Try it: simulate a breach</h3>
+        <div class="toggle-row">
+          <span class="toggle-switch">
+            <input type="checkbox" id="m3-reuse">
+            <span class="toggle-slider"></span>
+          </span>
+          <label for="m3-reuse">Reuse one password across every account</label>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-switch">
+            <input type="checkbox" id="m3-mfa">
+            <span class="toggle-slider"></span>
+          </span>
+          <label for="m3-mfa">MFA enabled on all accounts</label>
+        </div>
+
+        <div class="account-grid" id="m3-accounts"></div>
+        <p class="breach-counter" id="m3-counter">Accounts compromised: 0/5</p>
+        <button type="button" class="btn btn-primary" id="m3-breach">Simulate: shopping site breached</button>
+        <button type="button" class="btn" id="m3-reset">Reset</button>
+
+        <div class="card-grid" style="margin-top:20px;">
+          <div class="scenario-card">
+            <h4>Plaintext notes app</h4>
+            <p>One device compromise exposes every password instantly &mdash; they're sitting there in plain text.</p>
+          </div>
+          <div class="scenario-card">
+            <h4>Password manager</h4>
+            <p>One device compromise still needs the separate vault master password before anything is exposed.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="module-4" role="tabpanel" aria-labelledby="tab-module-4" tabindex="0">
+      <p class="module-kicker">Module 4</p>
+      <h2>Spot the phishing red flags</h2>
+      <p class="module-lede">Phishing emails are designed to be skimmed, not read closely. Click each suspicious part of this mock email below to see why it's a red flag.</p>
+      <div class="disclosure-controls">
+        <button type="button" class="expand-all">Expand all technical detail</button>
+        <button type="button" class="collapse-all">Collapse all</button>
+      </div>
+
+      <div class="module-section" id="module-4-widget">
+        <p class="flag-counter" id="m4-counter">Red flags found: 0 / 7</p>
+        <div class="mock-email" id="m4-email"></div>
+        <button type="button" class="btn" id="m4-reveal" style="margin-top:14px;">Reveal all</button>
+        <div class="flag-summary-list" id="m4-summary"></div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="module-5" role="tabpanel" aria-labelledby="tab-module-5" tabindex="0">
+      <p class="module-kicker">Module 5</p>
+      <h2>Data at rest: protected until it isn't</h2>
+      <p class="module-lede">A password or lock screen only protects data while the device is on and locked. What happens the moment that assumption breaks &mdash; a lost laptop, a misconfigured bucket, an unlocked phone &mdash; depends entirely on what's underneath.</p>
+      <div class="disclosure-controls">
+        <button type="button" class="expand-all">Expand all technical detail</button>
+        <button type="button" class="collapse-all">Collapse all</button>
+      </div>
+
+      <div class="module-section" id="module-5-widget">
+        <div class="card-grid" id="m5-cards"></div>
+      </div>
+    </section>
+
+    <p class="disclaimer">Built for education and security-awareness purposes only. Figures used throughout (crack speeds, breach mechanics) are illustrative approximations for teaching relative risk, not audited security measurements or pentesting guidance.</p>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
