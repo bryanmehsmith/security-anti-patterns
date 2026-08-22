@@ -19,7 +19,7 @@ export const HARDWARE_TIERS = {
 // benchmarked: laptop = gpu / 1500 (zipcrypto), gpu / 1000 (aes256zip/office);
 // cluster = gpu * 64 for all schemes.
 export const GUESS_RATES = {
-  zipcrypto: { laptop: 2.0e7, gpu: 3.0e10, cluster: 1.92e12 },
+  zipcrypto: { laptop: 5.0e6, gpu: 7.5e9, cluster: 4.8e11 },
   aes256zip: { laptop: 2.0e4, gpu: 2.0e7, cluster: 1.28e9 },
   office: { laptop: 1.3e3, gpu: 6.6e4, cluster: 4.25e6 },
 };

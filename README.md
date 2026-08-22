@@ -9,10 +9,9 @@ No backend, no build step: static HTML/CSS and vanilla ES modules, served
 as-is. Open [`index.html`](index.html) directly or through any static file
 server.
 
-1. **File transfer** ([`js/modules/fileTransfer.js`](js/modules/fileTransfer.js)) -
-   email vs. SFTP: a slider scrubs through 90 days showing how many copies of
-   a file exist outside your control under each transfer method, and whether
-   recall/revoke actually work.
+1. **File transfer** (static markup in [`index.html`](index.html), no JS
+   module) - email vs. SFTP: which one actually avoids leaving copies outside
+   your control, and whether recall/revoke works.
 2. **Password-protected files** ([`js/modules/passwordCrack.js`](js/modules/passwordCrack.js)) -
    a crack-time calculator over password length, character set, file/encryption
    scheme, and attacker hardware, anchored to published hashcat benchmarks
